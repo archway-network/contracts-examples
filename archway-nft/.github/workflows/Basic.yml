@@ -16,10 +16,10 @@ jobs:
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
-          toolchain: 1.51.0
+          toolchain: stable
           target: wasm32-unknown-unknown
           override: true
+          profile: minimal
 
       - name: Run unit tests
         uses: actions-rs/cargo@v1
@@ -47,9 +47,9 @@ jobs:
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
-          toolchain: 1.51.0
+          toolchain: stable
           override: true
+          profile: minimal
           components: rustfmt, clippy
 
       - name: Run cargo fmt
@@ -64,11 +64,20 @@ jobs:
           command: clippy
           args: -- -D warnings
 
-      # TODO: we should check
-      # CHANGES_IN_REPO=$(git status --porcelain)
-      # after this, but I don't know how
-      - name: Generate Schema
+      - name: Generate schema
         uses: actions-rs/cargo@v1
         with:
           command: schema
           args: --locked
+
+      - name: Verify schema
+        uses: tj-actions/verify-changed-files@v8
+        id: verify-schema
+        with:
+          files: schema/.*\.json
+
+      - name: Display changed schemas
+        if: steps.verify-schema.outputs.files_changed == 'true'
+        run: |
+          echo "The schema files are not in sync with the repository. Please, run 'cargo schema' to generate them again and commit the changes."
+          exit 1
