@@ -6,8 +6,7 @@ edition = "2018"
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
-  "contract.wasm",
-  "hash.txt",
+  "artifacts/*",
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -34,21 +33,22 @@ library = []
 
 [package.metadata.scripts]
 optimize = """docker run --rm -v "$(pwd)":/code \
+  -e CARGO_TERM_COLOR=always \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/rust-optimizer:0.12.3
+  cosmwasm/rust-optimizer:0.12.5
 """
 
 [dependencies]
-cosmwasm-std = "0.16.2"
-cosmwasm-storage = "0.16.2"
-cw-storage-plus = "0.9.1"
-cw0 = "0.9.1"
-cw2 = "0.9.1"
-cw20 = "0.9.1"
-schemars = "0.8.8"
-serde = { version = "1.0.130", default-features = false, features = ["derive"] }
-thiserror = "1.0.26"
+cosmwasm-std = "1.0.0-beta"
+cosmwasm-storage = "1.0.0-beta"
+cw-storage-plus = "0.12"
+cw0 = "0.10"
+cw2 = "0.12"
+cw20 = "0.12"
+schemars = "0.8"
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+thiserror = "1.0"
 
 [dev-dependencies]
-cosmwasm-schema = "0.16.2"
+cosmwasm-schema = "1.0.0-beta"

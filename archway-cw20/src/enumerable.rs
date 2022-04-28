@@ -16,24 +16,21 @@ pub fn query_all_allowances(
 ) -> StdResult<AllAllowancesResponse> {
     let owner_addr = deps.api.addr_validate(&owner)?;
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = start_after.map(Bound::exclusive);
+    let start = start_after.map(|s| Bound::ExclusiveRaw(s.into_bytes()));
 
-    let allowances: StdResult<Vec<AllowanceInfo>> = ALLOWANCES
+    let allowances = ALLOWANCES
         .prefix(&owner_addr)
         .range(deps.storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| {
-            let (k, v) = item?;
-            Ok(AllowanceInfo {
-                spender: String::from_utf8(k)?,
-                allowance: v.allowance,
-                expires: v.expires,
+            item.map(|(addr, allow)| AllowanceInfo {
+                spender: addr.into(),
+                allowance: allow.allowance,
+                expires: allow.expires,
             })
         })
-        .collect();
-    Ok(AllAllowancesResponse {
-        allowances: allowances?,
-    })
+        .collect::<StdResult<_>>()?;
+    Ok(AllAllowancesResponse { allowances })
 }
 
 pub fn query_all_accounts(
@@ -42,24 +39,22 @@ pub fn query_all_accounts(
     limit: Option<u32>,
 ) -> StdResult<AllAccountsResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-    let start = start_after.map(Bound::exclusive);
+    let start = start_after.map(|s| Bound::ExclusiveRaw(s.into()));
 
-    let accounts: Result<Vec<_>, _> = BALANCES
+    let accounts = BALANCES
         .keys(deps.storage, start, None, Order::Ascending)
-        .map(String::from_utf8)
         .take(limit)
-        .collect();
+        .map(|item| item.map(Into::into))
+        .collect::<StdResult<_>>()?;
 
-    Ok(AllAccountsResponse {
-        accounts: accounts?,
-    })
+    Ok(AllAccountsResponse { accounts })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
     use cosmwasm_std::{coins, DepsMut, Uint128};
     use cw20::{Cw20Coin, Expiration, TokenInfoResponse};
 
@@ -87,7 +82,7 @@ mod tests {
 
     #[test]
     fn query_all_allowances_works() {
-        let mut deps = mock_dependencies(&coins(2, "token"));
+        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
         let owner = String::from("owner");
         // these are in alphabetical order same than insert order
@@ -150,7 +145,7 @@ mod tests {
 
     #[test]
     fn query_all_accounts_works() {
-        let mut deps = mock_dependencies(&coins(2, "token"));
+        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
         // insert order and lexicographical order are different
         let acct1 = String::from("acct01");
