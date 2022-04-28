@@ -41,7 +41,7 @@ where
             "num_tokens",
             "operators",
             "tokens",
-            "tokens_owner",
+            "tokens__owner",
         )
     }
 }
@@ -77,6 +77,12 @@ where
 
     pub fn increment_tokens(&self, storage: &mut dyn Storage) -> StdResult<u64> {
         let val = self.token_count(storage)? + 1;
+        self.token_count.save(storage, &val)?;
+        Ok(val)
+    }
+
+    pub fn decrement_tokens(&self, storage: &mut dyn Storage) -> StdResult<u64> {
+        let val = self.token_count(storage)? - 1;
         self.token_count.save(storage, &val)?;
         Ok(val)
     }
@@ -116,8 +122,7 @@ pub struct TokenIndexes<'a, T>
 where
     T: Serialize + DeserializeOwned + Clone,
 {
-    // pk goes to second tuple element
-    pub owner: MultiIndex<'a, (Addr, Vec<u8>), TokenInfo<T>>,
+    pub owner: MultiIndex<'a, Addr, TokenInfo<T>, Addr>,
 }
 
 impl<'a, T> IndexList<TokenInfo<T>> for TokenIndexes<'a, T>
@@ -130,6 +135,6 @@ where
     }
 }
 
-pub fn token_owner_idx<T>(d: &TokenInfo<T>, k: Vec<u8>) -> (Addr, Vec<u8>) {
-    (d.owner.clone(), k)
+pub fn token_owner_idx<T>(d: &TokenInfo<T>) -> Addr {
+    d.owner.clone()
 }
